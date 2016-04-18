@@ -164,12 +164,6 @@ func runGames(numberOfGames: Int) -> [Player] {
     return players
 }
 
-//var results = ""
-//
-//for player in players {
-//    results = results + "Strategy: \(player.strategy) Original Guess: \(player.originalGuess) Total wins: \(player.wins)\n"
-//}
-
 func collectResults(gameResults: [Player]) {
     for player in gameResults {
         let key = "Strategy: \(player.strategy) Original Guess: \(player.originalGuess)"
@@ -185,8 +179,6 @@ let numberOfGames = 1000000
 let numberOfCPUs = NSProcessInfo.processInfo().activeProcessorCount
 let numberOfGamesPerCPU = numberOfGames / numberOfCPUs
 let numberOfGamesPerCPURemainder = numberOfGames % numberOfCPUs
-
-print("\(numberOfGamesPerCPURemainder)")
 
 var gameGroup = dispatch_group_create()
 
