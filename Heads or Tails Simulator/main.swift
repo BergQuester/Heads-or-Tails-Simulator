@@ -101,70 +101,126 @@ public class Player {
     }
 }
 
+func runGames(numberOfGames: Int) -> [Player] {
+    
+    let strategies = [Strategy.Random, Strategy.Alternating, Strategy.HoldOnWinSwitchOnLoss, Strategy.HoldOnLossSwitchOnWin, ]
+    var players = [Player]()
+    var playingPlayers = [Player]()
 
-let strategies = [Strategy.Random, Strategy.Alternating, Strategy.HoldOnWinSwitchOnLoss, Strategy.HoldOnLossSwitchOnWin, ]
-var players = [Player]()
-var playingPlayers = [Player]()
 
-
-for strategy in strategies {
-    
-    
-    switch strategy {
-    case Strategy.Random:
-        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-    case Strategy.Alternating:
-        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-        players.append(Player(playerStategy: strategy, initalGuess: .Tails))
-    case Strategy.HoldOnWinSwitchOnLoss:
-        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-//        players.append(Player(playerStategy: strategy, initalGuess: .Tails))
-    case Strategy.HoldOnLossSwitchOnWin:
-        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-//        players.append(Player(playerStategy: strategy, initalGuess: .Tails))
-//    case Strategy.LastCoinToss:
-//        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-//    case Strategy.ReverseLastCoinToss:
-//        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-    }
-}
-
-for game in 1...1000000 {
-    
-//    print("Game \(game):")
-    
-    playingPlayers = players
-    
-//    print("Starting players: \(playingPlayers.count)")
-    while playingPlayers.count > 1 {
+    for strategy in strategies {
         
-        let coinToss = arc4random_uniform(2) == 0 ? CoinValue.Heads : CoinValue.Tails
         
-        let stillplayingPlayers = playingPlayers.filter({
-            let playerResult = $0.evaluateCoinToss(coinToss)
-            
-            return playerResult == .StillIn
-        })
-        
-        if (stillplayingPlayers.count > 0) {
-            playingPlayers = stillplayingPlayers
-        } else {    // All players lost simultaneously
-            for player in playingPlayers {
-                player.retryToss()
-            }
+        switch strategy {
+        case Strategy.Random:
+            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
+        case Strategy.Alternating:
+            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
+            players.append(Player(playerStategy: strategy, initalGuess: .Tails))
+        case Strategy.HoldOnWinSwitchOnLoss:
+            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
+    //        players.append(Player(playerStategy: strategy, initalGuess: .Tails))
+        case Strategy.HoldOnLossSwitchOnWin:
+            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
+    //        players.append(Player(playerStategy: strategy, initalGuess: .Tails))
+    //    case Strategy.LastCoinToss:
+    //        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
+    //    case Strategy.ReverseLastCoinToss:
+    //        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
         }
     }
 
-    players.forEach({
-        $0.reset()
-    })
+    for _ in 1...numberOfGames {
+        
+    //    print("Game \(game):")
+        
+        playingPlayers = players
+        
+    //    print("Starting players: \(playingPlayers.count)")
+        while playingPlayers.count > 1 {
+            
+            let coinToss = arc4random_uniform(2) == 0 ? CoinValue.Heads : CoinValue.Tails
+            
+            let stillplayingPlayers = playingPlayers.filter({
+                let playerResult = $0.evaluateCoinToss(coinToss)
+                
+                return playerResult == .StillIn
+            })
+            
+            if (stillplayingPlayers.count > 0) {
+                playingPlayers = stillplayingPlayers
+            } else {    // All players lost simultaneously
+                for player in playingPlayers {
+                    player.retryToss()
+                }
+            }
+        }
+
+        players.forEach({
+            $0.reset()
+        })
+    }
+    
+    return players
 }
 
-var results = ""
+//var results = ""
+//
+//for player in players {
+//    results = results + "Strategy: \(player.strategy) Original Guess: \(player.originalGuess) Total wins: \(player.wins)\n"
+//}
 
-for player in players {
-    results = results + "Strategy: \(player.strategy) Original Guess: \(player.originalGuess) Total wins: \(player.wins)\n"
+func collectResults(gameResults: [Player]) {
+    for player in gameResults {
+        let key = "Strategy: \(player.strategy) Original Guess: \(player.originalGuess)"
+        let wins: Int = (simulatorResults[key] != nil) ? simulatorResults[key]! : 0
+        simulatorResults[key] = wins + player.wins
+    }
 }
 
-print(results)
+var simulatorResults = [String:Int]()
 
+
+let numberOfGames = 1000000
+let numberOfCPUs = NSProcessInfo.processInfo().activeProcessorCount
+let numberOfGamesPerCPU = numberOfGames / numberOfCPUs
+let numberOfGamesPerCPURemainder = numberOfGames % numberOfCPUs
+
+print("\(numberOfGamesPerCPURemainder)")
+
+var gameGroup = dispatch_group_create()
+
+let gameQueue = dispatch_queue_create("headsTailsGameQueue", DISPATCH_QUEUE_CONCURRENT)
+let resultsLock = NSLock()
+
+print("\(NSDate())")
+
+for _ in 1...numberOfCPUs {
+    dispatch_group_enter(gameGroup)
+    dispatch_async(gameQueue) {
+        
+        let results = runGames(numberOfGamesPerCPU)
+        
+        resultsLock.lock()
+        
+        collectResults(results)
+        
+        resultsLock.unlock()
+        
+        dispatch_group_leave(gameGroup)
+    }
+}
+
+dispatch_group_wait(gameGroup, UInt64.max)
+
+if (numberOfGamesPerCPURemainder > 0) {
+    let results = runGames(numberOfGamesPerCPURemainder)
+    
+    collectResults(results)
+}
+
+print("\(NSDate())")
+
+for (resultKey, wins) in simulatorResults {
+    print("\(resultKey) Total wins: \(wins)")
+}
