@@ -79,7 +79,7 @@ public class Player {
         // stragegize
         switch self.strategy {
         case .Random:
-            self.currentGuess = arc4random() % 2 == 0 ? .Heads : .Tails
+            self.currentGuess = arc4random_uniform(2) == 0 ? .Heads : .Tails
         case .Alternating:
             self.toggleGuess()
         case .HoldOnWinSwitchOnLoss:
