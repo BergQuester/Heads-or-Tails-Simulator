@@ -213,6 +213,11 @@ if (numberOfGamesPerCPURemainder > 0) {
 
 print("\(NSDate())")
 
+var gamesRun = 0
+
 for (resultKey, wins) in simulatorResults {
     print("\(resultKey) Total wins: \(wins)")
+    gamesRun = gamesRun + wins
 }
+
+print("Total games run: \(gamesRun)")
