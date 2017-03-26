@@ -13,31 +13,31 @@ import Foundation
 import Cocoa
 
 enum CoinValue {
-    case Heads
-    case Tails
+    case heads
+    case tails
 }
 
 enum Strategy {
-    case Random
-    case Alternating
-    case HoldOnWinSwitchOnLoss
-    case HoldOnLossSwitchOnWin
+    case random
+    case alternating
+    case holdOnWinSwitchOnLoss
+    case holdOnLossSwitchOnWin
 //    case LastCoinToss  // This is the same as HoldOnWinSwitchOnLoss
 //    case ReverseLastCoinToss // This is the same as HoldOnLossSwitchOnWin
 }
 
 enum LostGame {
-    case Lost
-    case StillIn
+    case lost
+    case stillIn
 }
 
 
-public class Player {
-    private var originalGuess: CoinValue
+open class Player {
+    fileprivate var originalGuess: CoinValue
     var currentGuess: CoinValue
-    private var strategy: Strategy
+    fileprivate var strategy: Strategy
     var lossesLeft: Int
-    private var wins: Int
+    fileprivate var wins: Int
     
     init (playerStategy: Strategy, initalGuess: CoinValue) {
         self.originalGuess = initalGuess
@@ -47,7 +47,7 @@ public class Player {
         self.wins = 0
     }
     
-    private func reset() {
+    fileprivate func reset() {
         self.currentGuess = self.originalGuess
         if (self.lossesLeft > 0) {
             self.wins = self.wins + 1
@@ -56,15 +56,15 @@ public class Player {
         self.lossesLeft = 20
     }
     
-    private func retryToss() {
+    fileprivate func retryToss() {
         self.lossesLeft = self.lossesLeft + 1
     }
     
     func toggleGuess () {
-        self.currentGuess = self.currentGuess == .Heads ? .Tails : .Heads
+        self.currentGuess = self.currentGuess == .heads ? .tails : .heads
     }
     
-    func evaluateCoinToss(tossResult: CoinValue) -> LostGame {
+    func evaluateCoinToss(_ tossResult: CoinValue) -> LostGame {
         
         var lost = false
         // Evaluate win/loss of this round
@@ -78,15 +78,15 @@ public class Player {
         
         // stragegize
         switch self.strategy {
-        case .Random:
-            self.currentGuess = arc4random_uniform(2) == 0 ? .Heads : .Tails
-        case .Alternating:
+        case .random:
+            self.currentGuess = arc4random_uniform(2) == 0 ? .heads : .tails
+        case .alternating:
             self.toggleGuess()
-        case .HoldOnWinSwitchOnLoss:
+        case .holdOnWinSwitchOnLoss:
             if (lost) {
                 self.toggleGuess()
             }
-        case .HoldOnLossSwitchOnWin:
+        case .holdOnLossSwitchOnWin:
             if (!lost) {
                 self.toggleGuess()
             }
@@ -96,14 +96,14 @@ public class Player {
 //            self.currentGuess = tossResult == .Heads ? .Tails : .Heads
         }
         
-        return self.lossesLeft > 0 ? .StillIn : .Lost
+        return self.lossesLeft > 0 ? .stillIn : .lost
         
     }
 }
 
-func runGames(numberOfGames: Int) -> [Player] {
+func runGames(_ numberOfGames: Int) -> [Player] {
     
-    let strategies = [Strategy.Random, Strategy.Alternating, Strategy.HoldOnWinSwitchOnLoss, Strategy.HoldOnLossSwitchOnWin, ]
+    let strategies = [Strategy.random, Strategy.alternating, Strategy.holdOnWinSwitchOnLoss, Strategy.holdOnLossSwitchOnWin, ]
     var players = [Player]()
     var playingPlayers = [Player]()
 
@@ -112,16 +112,16 @@ func runGames(numberOfGames: Int) -> [Player] {
         
         
         switch strategy {
-        case Strategy.Random:
-            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-        case Strategy.Alternating:
-            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
-            players.append(Player(playerStategy: strategy, initalGuess: .Tails))
-        case Strategy.HoldOnWinSwitchOnLoss:
-            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
+        case Strategy.random:
+            players.append(Player(playerStategy: strategy, initalGuess: .heads))
+        case Strategy.alternating:
+            players.append(Player(playerStategy: strategy, initalGuess: .heads))
+            players.append(Player(playerStategy: strategy, initalGuess: .tails))
+        case Strategy.holdOnWinSwitchOnLoss:
+            players.append(Player(playerStategy: strategy, initalGuess: .heads))
     //        players.append(Player(playerStategy: strategy, initalGuess: .Tails))
-        case Strategy.HoldOnLossSwitchOnWin:
-            players.append(Player(playerStategy: strategy, initalGuess: .Heads))
+        case Strategy.holdOnLossSwitchOnWin:
+            players.append(Player(playerStategy: strategy, initalGuess: .heads))
     //        players.append(Player(playerStategy: strategy, initalGuess: .Tails))
     //    case Strategy.LastCoinToss:
     //        players.append(Player(playerStategy: strategy, initalGuess: .Heads))
@@ -139,12 +139,12 @@ func runGames(numberOfGames: Int) -> [Player] {
     //    print("Starting players: \(playingPlayers.count)")
         while playingPlayers.count > 1 {
             
-            let coinToss = arc4random_uniform(2) == 0 ? CoinValue.Heads : CoinValue.Tails
+            let coinToss = arc4random_uniform(2) == 0 ? CoinValue.heads : CoinValue.tails
             
             let stillplayingPlayers = playingPlayers.filter({
                 let playerResult = $0.evaluateCoinToss(coinToss)
                 
-                return playerResult == .StillIn
+                return playerResult == .stillIn
             })
             
             if (stillplayingPlayers.count > 0) {
@@ -164,7 +164,7 @@ func runGames(numberOfGames: Int) -> [Player] {
     return players
 }
 
-func collectResults(gameResults: [Player]) {
+func collectResults(_ gameResults: [Player]) {
     for player in gameResults {
         let key = "Strategy: \(player.strategy) Original Guess: \(player.originalGuess)"
         let wins: Int = (simulatorResults[key] != nil) ? simulatorResults[key]! : 0
@@ -176,20 +176,20 @@ var simulatorResults = [String:Int]()
 
 
 let numberOfGames = 1000000
-let numberOfCPUs = NSProcessInfo.processInfo().activeProcessorCount
+let numberOfCPUs = ProcessInfo.processInfo.activeProcessorCount
 let numberOfGamesPerCPU = numberOfGames / numberOfCPUs
 let numberOfGamesPerCPURemainder = numberOfGames % numberOfCPUs
 
-var gameGroup = dispatch_group_create()
+var gameGroup = DispatchGroup()
 
-let gameQueue = dispatch_queue_create("headsTailsGameQueue", DISPATCH_QUEUE_CONCURRENT)
+let gameQueue = DispatchQueue(label: "headsTailsGameQueue", attributes: DispatchQueue.Attributes.concurrent)
 let resultsLock = NSLock()
 
-print("\(NSDate())")
+print("\(Date())")
 
 for _ in 1...numberOfCPUs {
-    dispatch_group_enter(gameGroup)
-    dispatch_async(gameQueue) {
+    gameGroup.enter()
+    gameQueue.async {
         
         let results = runGames(numberOfGamesPerCPU)
         
@@ -199,11 +199,15 @@ for _ in 1...numberOfCPUs {
         
         resultsLock.unlock()
         
-        dispatch_group_leave(gameGroup)
+        gameGroup.leave()
     }
 }
 
-dispatch_group_wait(gameGroup, UInt64.max)
+let timeoutResult = gameGroup.wait(timeout: DispatchTime.distantFuture)
+
+if timeoutResult == .timedOut {
+    print("Game Timeout!");
+}
 
 if (numberOfGamesPerCPURemainder > 0) {
     let results = runGames(numberOfGamesPerCPURemainder)
@@ -211,7 +215,7 @@ if (numberOfGamesPerCPURemainder > 0) {
     collectResults(results)
 }
 
-print("\(NSDate())")
+print("\(Date())")
 
 var gamesRun = 0
 
