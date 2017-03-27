@@ -41,7 +41,7 @@ open class Player {
     var additionalLosses: Int
     fileprivate var wins: Int
     
-    init (playerStategy: Strategy, initalGuess: CoinValue) {
+    init (playerStategy: Strategy, initalGuess: CoinValue, additionalLosses: Int = 0) {
         self.originalGuess = initalGuess
         self.currentGuess = initalGuess
         self.strategy = playerStategy
