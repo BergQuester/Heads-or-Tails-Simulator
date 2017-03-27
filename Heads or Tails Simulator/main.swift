@@ -23,6 +23,8 @@ enum Strategy {
     case alternating
     case holdOnWinSwitchOnLoss
     case holdOnLossSwitchOnWin
+    case alwaysHeads
+    case alwaysTails
 //    case LastCoinToss  // This is the same as HoldOnWinSwitchOnLoss
 //    case ReverseLastCoinToss // This is the same as HoldOnLossSwitchOnWin
 }
@@ -81,6 +83,10 @@ open class Player {
             if (!lost) {
                 self.toggleGuess()
             }
+        case .alwaysHeads:
+            break;
+        case .alwaysTails:
+            break;
         }
     }
     
@@ -122,6 +128,8 @@ func signupPlayers() -> [Player] {
     players.append(Player(playerStategy: .holdOnWinSwitchOnLoss, initalGuess: .tails))
     players.append(Player(playerStategy: .holdOnLossSwitchOnWin, initalGuess: .heads))
     players.append(Player(playerStategy: .holdOnLossSwitchOnWin, initalGuess: .tails))
+    players.append(Player(playerStategy: .alwaysHeads, initalGuess: .heads))
+    players.append(Player(playerStategy: .alwaysTails, initalGuess: .tails))
 
     return players
 }
