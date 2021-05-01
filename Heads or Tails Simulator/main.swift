@@ -9,8 +9,8 @@
 import Foundation
 import Cocoa
 
-let numberOfGames = 1000000     // How many separate games to run
-let defaultLosses = 5           // Default number of losses a player
+let numberOfGames = 10     // How many separate games to run
+let defaultLosses = 1           // Default number of losses a player
                                 // can suffer before they are 'out'.
 
 enum CoinValue {
@@ -35,13 +35,16 @@ enum LostGame {
 }
 
 
-open class Player {
+struct Player {
     fileprivate var originalGuess: CoinValue
     var currentGuess: CoinValue
     fileprivate var strategy: Strategy
     var lossesLeft: Int
     var additionalLosses: Int
     fileprivate var wins: Int
+    var playerStatus: LostGame {
+        return self.lossesLeft > 0 ? .stillIn : .lost
+    }
     
     init (playerStategy: Strategy, initalGuess: CoinValue, additionalLosses: Int = 0) {
         self.originalGuess = initalGuess
@@ -52,65 +55,70 @@ open class Player {
         self.wins = 0
     }
     
-    fileprivate func reset() {
-        self.currentGuess = self.originalGuess
-        if (self.lossesLeft > 0) {
-            self.wins = self.wins + 1
-//            print("\(self.strategy) \(self.originalGuess) won")
-        }
-        self.lossesLeft = defaultLosses + self.additionalLosses
+//    fileprivate mutating func reset() -> Player {
+//        self.currentGuess = self.originalGuess
+//        if (self.lossesLeft > 0) {
+//            self.wins = self.wins + 1
+////            print("\(self.strategy) \(self.originalGuess) won")
+//        }
+//        self.lossesLeft = defaultLosses + self.additionalLosses
+//
+//        return self
+//    }
+    
+    fileprivate func retryToss() -> Player {
+        var new = self
+        new.lossesLeft = new.lossesLeft + 1
+        return new
     }
     
-    fileprivate func retryToss() {
-        self.lossesLeft = self.lossesLeft + 1
+    func toggleGuess () -> Player {
+        var new = self
+        new.currentGuess = new.currentGuess == .heads ? .tails : .heads
+        return new
     }
     
-    func toggleGuess () {
-        self.currentGuess = self.currentGuess == .heads ? .tails : .heads
-    }
-    
-    func strategize(lost: Bool) {
-        switch self.strategy {
+    func strategize(lost: Bool) -> Player {
+        var new = self
+        switch new.strategy {
         case .random:
-            self.currentGuess = arc4random_uniform(2) == 0 ? .heads : .tails
+            new.currentGuess = arc4random_uniform(2) == 0 ? .heads : .tails
         case .alternating:
-            self.toggleGuess()
+            new = new.toggleGuess()
         case .holdOnWinSwitchOnLoss:
             if (lost) {
-                self.toggleGuess()
+                new = new.toggleGuess()
             }
         case .holdOnLossSwitchOnWin:
             if (!lost) {
-                self.toggleGuess()
+                new = new.toggleGuess()
             }
         case .alwaysHeads:
             break;
         case .alwaysTails:
             break;
         }
+
+        return new
     }
     
     // Takes a coin toss result and evaluates if the player lost this round or not
     // Also strategizes for the next round based on this toss
     // returns if the player is still in the game
-    func evaluateCoinToss(_ tossResult: CoinValue) -> LostGame {
-        
+    func evaluateCoinToss(_ tossResult: CoinValue) -> Player {
+
+        var new = self
         var lost = false
         // Evaluate win/loss of this round
-        if (self.currentGuess != tossResult) {
-            self.lossesLeft = self.lossesLeft - 1
+        if (new.currentGuess != tossResult) {
+            new.lossesLeft = new.lossesLeft - 1
 //            print("\(self.strategy) starting with \(self.originalGuess) has lost on coin toss \(tossResult) with guess \(self.currentGuess) and has \(self.lossesLeft) losses left")
 
             lost = true
         }
-        
-        let playerStatus: LostGame = self.lossesLeft > 0 ? .stillIn : .lost
-        
+
         // stragegize
-        self.strategize(lost: lost);
-        
-        // return if we're still in the game
-        return playerStatus
+        return new.strategize(lost: lost);
     }
 }
 
@@ -136,36 +144,31 @@ func signupPlayers() -> [Player] {
 
 func runGames(_ numberOfGames: Int) -> [Player] {
     
-    let players = signupPlayers()
-    var playingPlayers = [Player]()
-    
+    var playingPlayers = signupPlayers()
+    var lostPlayers = [Players]()
+
     for _ in 1...numberOfGames {
-        
-        playingPlayers = players
-        
+
+
     //    print("Starting players: \(playingPlayers.count)")
         while playingPlayers.count > 1 {
             
             let coinToss = arc4random_uniform(2) == 0 ? CoinValue.heads : CoinValue.tails
             
-            let stillplayingPlayers = playingPlayers.filter({
-                let playerResult = $0.evaluateCoinToss(coinToss)
-                
-                return playerResult == .stillIn
-            })
+            let stillplayingPlayers = playingPlayers
+                .map{ $0.evaluateCoinToss(coinToss) }
+                .filter{ $0.playerStatus == LostGame.stillIn }
+
+            lostPlayers = playingPlayers.filter {0.playerStatus == LostGame.lost }
             
             if (stillplayingPlayers.count > 0) {
                 playingPlayers = stillplayingPlayers
             } else {    // All players lost simultaneously
-                for player in playingPlayers {
-                    player.retryToss()
-                }
+                playingPlayers = playingPlayers.map { $0.retryToss() }
             }
         }
 
-        players.forEach({
-            $0.reset()
-        })
+        playingPlayers = players
     }
     
     DispatchQueue.main.async {
@@ -205,20 +208,22 @@ let resultsLock = NSLock()
 print("Start time: \(Date())")
 print("Playing \(numberOfGames) games")
 
-// Run threaded games
-for _ in 1...numberOfCPUs {
-    gameGroup.enter()
-    gameQueue.async {
-        
-        let results = runGames(numberOfGamesPerCPU)
-        
-        resultsLock.lock()
-        
-        collectResults(results)
-        
-        resultsLock.unlock()
-        
-        gameGroup.leave()
+if numberOfGamesPerCPU > 0 {
+    // Run threaded games
+    for _ in 1...numberOfCPUs {
+        gameGroup.enter()
+        gameQueue.async {
+
+            let results = runGames(numberOfGamesPerCPU)
+
+            resultsLock.lock()
+
+            collectResults(results)
+
+            resultsLock.unlock()
+
+            gameGroup.leave()
+        }
     }
 }
 
