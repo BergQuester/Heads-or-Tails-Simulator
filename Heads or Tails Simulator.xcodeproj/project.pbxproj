@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		FEC3E7E41CC454F900F137BD /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC3E7E31CC454F900F137BD /* main.swift */; };
+		FEDDA2FF2C739E0900A28F40 /* Xorswift in Frameworks */ = {isa = PBXBuildFile; productRef = FEDDA2FE2C739E0900A28F40 /* Xorswift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,6 +33,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEDDA2FF2C739E0900A28F40 /* Xorswift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +80,9 @@
 			dependencies = (
 			);
 			name = "Heads or Tails Simulator";
+			packageProductDependencies = (
+				FEDDA2FE2C739E0900A28F40 /* Xorswift */,
+			);
 			productName = "Heads or Tails Simulator";
 			productReference = FEC3E7E01CC454F900F137BD /* Heads or Tails Simulator */;
 			productType = "com.apple.product-type.tool";
@@ -108,6 +113,9 @@
 				en,
 			);
 			mainGroup = FEC3E7D71CC454F900F137BD;
+			packageReferences = (
+				FEDDA2FD2C739E0900A28F40 /* XCRemoteSwiftPackageReference "xorswift" */,
+			);
 			productRefGroup = FEC3E7E11CC454F900F137BD /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -283,6 +291,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FEDDA2FD2C739E0900A28F40 /* XCRemoteSwiftPackageReference "xorswift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/t-ae/xorswift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FEDDA2FE2C739E0900A28F40 /* Xorswift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FEDDA2FD2C739E0900A28F40 /* XCRemoteSwiftPackageReference "xorswift" */;
+			productName = Xorswift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FEC3E7D81CC454F900F137BD /* Project object */;
 }

@@ -8,6 +8,7 @@
 
 import Foundation
 import Cocoa
+import Xorswift
 
 let numberOfGames = 1000000     // How many separate games to run
 let defaultLosses = 5           // Default number of losses a player
@@ -29,8 +30,9 @@ enum Strategy {
 //    case ReverseLastCoinToss // This is the same as HoldOnLossSwitchOnWin
 }
 
-enum LostGame {
+enum PlayerStatus {
     case lost
+    case out
     case stillIn
 }
 
@@ -42,7 +44,8 @@ open class Player {
     var lossesLeft: Int
     var additionalLosses: Int
     fileprivate var wins: Int
-    
+    var playerStatus: PlayerStatus = .stillIn
+
     init (playerStategy: Strategy, initalGuess: CoinValue, additionalLosses: Int = 0) {
         self.originalGuess = initalGuess
         self.currentGuess = initalGuess
@@ -54,6 +57,7 @@ open class Player {
     
     fileprivate func reset() {
         self.currentGuess = self.originalGuess
+        self.playerStatus = .stillIn
         if (self.lossesLeft > 0) {
             self.wins = self.wins + 1
 //            print("\(self.strategy) \(self.originalGuess) won")
@@ -69,10 +73,10 @@ open class Player {
         self.currentGuess = self.currentGuess == .heads ? .tails : .heads
     }
     
-    func strategize(lost: Bool) {
+    func strategize<T>(lost: Bool, using generator: inout T) where T : RandomNumberGenerator {
         switch self.strategy {
         case .random:
-            self.currentGuess = arc4random_uniform(2) == 0 ? .heads : .tails
+            self.currentGuess = Bool.random(using: &generator) ? .heads : .tails
         case .alternating:
             self.toggleGuess()
         case .holdOnWinSwitchOnLoss:
@@ -93,8 +97,8 @@ open class Player {
     // Takes a coin toss result and evaluates if the player lost this round or not
     // Also strategizes for the next round based on this toss
     // returns if the player is still in the game
-    func evaluateCoinToss(_ tossResult: CoinValue) -> LostGame {
-        
+    func evaluateCoinToss<T>(_ tossResult: CoinValue, using generator: inout T) where T : RandomNumberGenerator {
+
         var lost = false
         // Evaluate win/loss of this round
         if (self.currentGuess != tossResult) {
@@ -104,19 +108,16 @@ open class Player {
             lost = true
         }
         
-        let playerStatus: LostGame = self.lossesLeft > 0 ? .stillIn : .lost
-        
+        playerStatus = self.lossesLeft > 0 ? .stillIn : .lost
+
         // stragegize
-        self.strategize(lost: lost);
-        
-        // return if we're still in the game
-        return playerStatus
+        self.strategize(lost: lost, using: &generator);
     }
 }
 
-func randomAdditionalLosses() -> Int {
-    return Int(arc4random_uniform(7)) - 3
-}
+//func randomAdditionalLosses() -> Int {
+//    return Int(arc4random_uniform(7)) - 3
+//}
 
 func signupPlayers() -> [Player] {
     
@@ -137,28 +138,38 @@ func signupPlayers() -> [Player] {
 func runGames(_ numberOfGames: Int) -> [Player] {
     
     let players = signupPlayers()
-    var playingPlayers = [Player]()
-    
+    var randomNumberGenerator = XorshiftGenerator(x: arc4random(), y: arc4random(), z: arc4random(), w: arc4random())
+
     for _ in 1...numberOfGames {
-        
-        playingPlayers = players
-        
+
+        var stillPlayingCount = players.count
     //    print("Starting players: \(playingPlayers.count)")
-        while playingPlayers.count > 1 {
+        while stillPlayingCount > 1 {
+
+            let coinToss = Bool.random(using: &randomNumberGenerator) ? CoinValue.heads : CoinValue.tails
+
+            players.forEach {
+                $0.evaluateCoinToss(coinToss, using: &randomNumberGenerator)
+            }
             
-            let coinToss = arc4random_uniform(2) == 0 ? CoinValue.heads : CoinValue.tails
-            
-            let stillplayingPlayers = playingPlayers.filter({
-                let playerResult = $0.evaluateCoinToss(coinToss)
-                
-                return playerResult == .stillIn
-            })
-            
-            if (stillplayingPlayers.count > 0) {
-                playingPlayers = stillplayingPlayers
+            stillPlayingCount = players.reduce(into: 0) { partialResult, player in
+                if player.playerStatus == .stillIn {
+                    partialResult += 1
+                }
+            }
+            if (stillPlayingCount > 0) {
+                players.forEach {
+                    if $0.playerStatus == .lost {
+                        $0.playerStatus = .out
+                    }
+                }
             } else {    // All players lost simultaneously
-                for player in playingPlayers {
-                    player.retryToss()
+                players.forEach {
+                    if $0.playerStatus == .lost {
+                        $0.playerStatus = .stillIn
+                        $0.retryToss()
+                        stillPlayingCount += 1
+                    }
                 }
             }
         }
@@ -202,7 +213,8 @@ var gameGroup = DispatchGroup()
 let gameQueue = DispatchQueue(label: "headsTailsGameQueue", attributes: DispatchQueue.Attributes.concurrent)
 let resultsLock = NSLock()
 
-print("Start time: \(Date())")
+let start = Date()
+print("Start time: \(start)")
 print("Playing \(numberOfGames) games")
 
 // Run threaded games
@@ -235,7 +247,9 @@ if (numberOfGamesPerCPURemainder > 0) {
     collectResults(results)
 }
 
-print("End time: \(Date())")
+let end = Date()
+print("End time: \(end)")
+print("Seconds: \(end.timeIntervalSince1970 - start.timeIntervalSince1970)")
 
 var gamesRun = 0
 
