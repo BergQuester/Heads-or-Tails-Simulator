@@ -37,7 +37,7 @@ enum PlayerStatus {
 }
 
 
-open class Player {
+struct Player {
     fileprivate var originalGuess: CoinValue
     var currentGuess: CoinValue
     fileprivate var strategy: Strategy
@@ -55,7 +55,7 @@ open class Player {
         self.wins = 0
     }
     
-    fileprivate func reset() {
+    fileprivate mutating func reset() {
         self.currentGuess = self.originalGuess
         self.playerStatus = .stillIn
         if (self.lossesLeft > 0) {
@@ -65,15 +65,15 @@ open class Player {
         self.lossesLeft = defaultLosses + self.additionalLosses
     }
     
-    fileprivate func retryToss() {
+    fileprivate mutating func retryToss() {
         self.lossesLeft = self.lossesLeft + 1
     }
     
-    func toggleGuess () {
+    mutating func toggleGuess () {
         self.currentGuess = self.currentGuess == .heads ? .tails : .heads
     }
     
-    func strategize<T>(lost: Bool, using generator: inout T) where T : RandomNumberGenerator {
+    mutating func strategize<T>(lost: Bool, using generator: inout T) where T : RandomNumberGenerator {
         switch self.strategy {
         case .random:
             self.currentGuess = Bool.random(using: &generator) ? .heads : .tails
@@ -97,7 +97,7 @@ open class Player {
     // Takes a coin toss result and evaluates if the player lost this round or not
     // Also strategizes for the next round based on this toss
     // returns if the player is still in the game
-    func evaluateCoinToss<T>(_ tossResult: CoinValue, using generator: inout T) where T : RandomNumberGenerator {
+    mutating func evaluateCoinToss<T>(_ tossResult: CoinValue, using generator: inout T) where T : RandomNumberGenerator {
 
         var lost = false
         // Evaluate win/loss of this round
@@ -137,20 +137,23 @@ func signupPlayers() -> [Player] {
 
 func runGames(_ numberOfGames: Int) -> [Player] {
     
-    let players = signupPlayers()
+    var players = signupPlayers()
     var randomNumberGenerator = XorshiftGenerator(x: arc4random(), y: arc4random(), z: arc4random(), w: arc4random())
-
+    let playersCount = players.count
     for _ in 1...numberOfGames {
 
-        var stillPlayingCount = players.count
+        var stillPlayingCount = playersCount
     //    print("Starting players: \(playingPlayers.count)")
         while stillPlayingCount > 1 {
 
-            let coinToss = Bool.random(using: &randomNumberGenerator) ? CoinValue.heads : CoinValue.tails
+            let coinToss: CoinValue = Bool.random(using: &randomNumberGenerator) ? .heads : .tails
 
-            players.forEach {
-                $0.evaluateCoinToss(coinToss, using: &randomNumberGenerator)
+            for index in players.indices {
+                players[index].evaluateCoinToss(coinToss, using: &randomNumberGenerator)
             }
+//            players.forEach {
+//                $0.evaluateCoinToss(coinToss, using: &randomNumberGenerator)
+//            }
             
             stillPlayingCount = players.reduce(into: 0) { partialResult, player in
                 if player.playerStatus == .stillIn {
@@ -158,25 +161,40 @@ func runGames(_ numberOfGames: Int) -> [Player] {
                 }
             }
             if (stillPlayingCount > 0) {
-                players.forEach {
-                    if $0.playerStatus == .lost {
-                        $0.playerStatus = .out
+                for index in players.indices {
+                    if players[index].playerStatus == .lost {
+                        players[index].playerStatus = .out
                     }
                 }
+//                players.forEach {
+//                    if $0.playerStatus == .lost {
+//                        $0.playerStatus = .out
+//                    }
+//                }
             } else {    // All players lost simultaneously
-                players.forEach {
-                    if $0.playerStatus == .lost {
-                        $0.playerStatus = .stillIn
-                        $0.retryToss()
+                for index in players.indices {
+                    if players[index].playerStatus == .lost {
+                        players[index].playerStatus = .stillIn
+                        players[index].retryToss()
                         stillPlayingCount += 1
                     }
                 }
+//                players.forEach {
+//                    if $0.playerStatus == .lost {
+//                        $0.playerStatus = .stillIn
+//                        $0.retryToss()
+//                        stillPlayingCount += 1
+//                    }
+//                }
             }
         }
 
-        players.forEach({
-            $0.reset()
-        })
+        for index in players.indices {
+            players[index].reset()
+        }
+//        players.forEach({
+//            $0.reset()
+//        })
     }
     
     DispatchQueue.main.async {
