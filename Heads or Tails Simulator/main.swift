@@ -10,7 +10,7 @@ import Foundation
 import Cocoa
 import Xorswift
 
-let numberOfGames = 1000000     // How many separate games to run
+let numberOfGames = 10000000     // How many separate games to run
 let defaultLosses = 5           // Default number of losses a player
                                 // can suffer before they are 'out'.
 
@@ -143,18 +143,16 @@ func runGames(_ numberOfGames: Int) -> [Player] {
     for _ in 1...numberOfGames {
 
         var stillPlayingCount = playersCount
-    //    print("Starting players: \(playingPlayers.count)")
         while stillPlayingCount > 1 {
 
             let coinToss: CoinValue = Bool.random(using: &randomNumberGenerator) ? .heads : .tails
 
             for index in players.indices {
-                players[index].evaluateCoinToss(coinToss, using: &randomNumberGenerator)
+                if players[index].playerStatus == .stillIn {
+                    players[index].evaluateCoinToss(coinToss, using: &randomNumberGenerator)
+                }
             }
-//            players.forEach {
-//                $0.evaluateCoinToss(coinToss, using: &randomNumberGenerator)
-//            }
-            
+
             stillPlayingCount = players.reduce(into: 0) { partialResult, player in
                 if player.playerStatus == .stillIn {
                     partialResult += 1
@@ -166,11 +164,6 @@ func runGames(_ numberOfGames: Int) -> [Player] {
                         players[index].playerStatus = .out
                     }
                 }
-//                players.forEach {
-//                    if $0.playerStatus == .lost {
-//                        $0.playerStatus = .out
-//                    }
-//                }
             } else {    // All players lost simultaneously
                 for index in players.indices {
                     if players[index].playerStatus == .lost {
@@ -179,13 +172,6 @@ func runGames(_ numberOfGames: Int) -> [Player] {
                         stillPlayingCount += 1
                     }
                 }
-//                players.forEach {
-//                    if $0.playerStatus == .lost {
-//                        $0.playerStatus = .stillIn
-//                        $0.retryToss()
-//                        stillPlayingCount += 1
-//                    }
-//                }
             }
         }
 
