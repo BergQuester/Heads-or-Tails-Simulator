@@ -7,10 +7,10 @@
 //
 
 import Foundation
-import Cocoa
+//import Cocoa
 import Xorswift
 
-let numberOfGames = 10000000     // How many separate games to run
+let numberOfGames = 1_000_000     // How many separate games to run
 let defaultLosses = 5           // Default number of losses a player
                                 // can suffer before they are 'out'.
 
@@ -26,8 +26,6 @@ enum Strategy {
     case holdOnLossSwitchOnWin
     case alwaysHeads
     case alwaysTails
-//    case LastCoinToss  // This is the same as HoldOnWinSwitchOnLoss
-//    case ReverseLastCoinToss // This is the same as HoldOnLossSwitchOnWin
 }
 
 enum PlayerStatus {
@@ -60,7 +58,6 @@ struct Player {
         self.playerStatus = .stillIn
         if (self.lossesLeft > 0) {
             self.wins = self.wins + 1
-//            print("\(self.strategy) \(self.originalGuess) won")
         }
         self.lossesLeft = defaultLosses + self.additionalLosses
     }
@@ -103,7 +100,6 @@ struct Player {
         // Evaluate win/loss of this round
         if (self.currentGuess != tossResult) {
             self.lossesLeft = self.lossesLeft - 1
-//            print("\(self.strategy) starting with \(self.originalGuess) has lost on coin toss \(tossResult) with guess \(self.currentGuess) and has \(self.lossesLeft) losses left")
 
             lost = true
         }
@@ -114,10 +110,6 @@ struct Player {
         self.strategize(lost: lost, using: &generator);
     }
 }
-
-//func randomAdditionalLosses() -> Int {
-//    return Int(arc4random_uniform(7)) - 3
-//}
 
 func signupPlayers() -> [Player] {
     
@@ -178,13 +170,6 @@ func runGames(_ numberOfGames: Int) -> [Player] {
         for index in players.indices {
             players[index].reset()
         }
-//        players.forEach({
-//            $0.reset()
-//        })
-    }
-    
-    DispatchQueue.main.async {
-        print("Finished \(numberOfGames) games")
     }
     
     return players
